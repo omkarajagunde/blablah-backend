@@ -313,7 +313,7 @@ process.on("SIGINT", function () {
 	httpServer.close();
 });
 
-httpServer.listen(80, (err) => {
+httpServer.listen(8000, (err) => {
 	if (err) {
 		console.log("Server ERR :: ", err);
 		return;

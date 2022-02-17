@@ -3,6 +3,14 @@ services:
   # we use redis for maintaing user chat sessions
   blablah-redis-server: 
     image: 'redis'
+  blablah-nginx-webserver: 
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      #- /etc/letsencrypt/:/etc/letsencrypt/
+    ports:
+      - 80:80
+      - 443:443
   # Nodejs ExpressJs Socket.io app to server chat sessions
   blablah-node-app:
     build: .

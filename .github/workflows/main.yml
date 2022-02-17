@@ -32,8 +32,8 @@ jobs:
             #remove all containers
             docker rmi $(docker images -q)
             
-            rm -rf blablah-frontend
-            git clone https://github.com/omkarajagunde/blablah-frontend.git
+            rm -rf blablah-backend
+            git clone https://github.com/omkarajagunde/blablah-backend.git
             cd blablah-frontend
             
             docker-compose up --build

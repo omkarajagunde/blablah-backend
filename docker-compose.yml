@@ -1,0 +1,10 @@
+version: '3'
+services:
+  # we use redis for maintaing user chat sessions
+  blablah-redis-server: 
+    image: 'redis'
+  # Nodejs ExpressJs Socket.io app to server chat sessions
+  blablah-node-app:
+    build: .
+    ports:
+      - "8080:8080"

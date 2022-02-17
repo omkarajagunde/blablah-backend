@@ -27,10 +27,10 @@ jobs:
           script: |
             #this deployment gives little downtime on app
             #stop all the running containers
-            #docker kill $(docker ps -q)
+            docker kill $(docker ps -q)
             
             #remove all containers
-            #docker rmi $(docker images -q)
+            docker rmi $(docker images -q)
             
             rm -rf blablah-backend
             git clone https://github.com/omkarajagunde/blablah-backend.git
@@ -39,4 +39,4 @@ jobs:
             npm install
             npm run prod
             
-            #docker-compose up --build
+            docker-compose up --build

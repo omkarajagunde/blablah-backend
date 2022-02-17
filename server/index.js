@@ -69,11 +69,7 @@ expressServer.use(express.json({ limit: "10mb" }));
 expressServer.use(cookieParser());
 // Client ip address finding middleware
 expressServer.use(expressip().getIpInfoMiddleware);
-expressServer.use(
-	cors({
-		origin: ["*"],
-	})
-);
+expressServer.use(cors());
 
 //route middlewares
 expressServer.use("/api/chat/enablement", LiveChatRoutes);
@@ -317,7 +313,7 @@ process.on("SIGINT", function () {
 	httpServer.close();
 });
 
-httpServer.listen(8080, (err) => {
+httpServer.listen(80, (err) => {
 	if (err) {
 		console.log("Server ERR :: ", err);
 		return;

@@ -35,8 +35,5 @@ jobs:
             rm -rf blablah-backend
             git clone https://github.com/omkarajagunde/blablah-backend.git
             cd blablah-backend
-
-            npm install
-            npm run prod
             
             docker-compose up --build

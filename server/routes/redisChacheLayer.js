@@ -1,6 +1,6 @@
 var Redis = require("ioredis");
 
-var client = new Redis(6379, "blablah-redis-server");
+var client = new Redis(6379, process.env.REDIS_SERVER_URI);
 
 const set = (key, value) => {
 	if (Array.isArray(value) && Array.isArray(key)) {

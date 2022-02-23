@@ -1,5 +1,7 @@
 var Redis = require("ioredis");
-
+const dotenv = require("dotenv");
+//initiate dotenv
+dotenv.config();
 var client = new Redis(6379, process.env.REDIS_SERVER_URI);
 
 const set = (key, value) => {

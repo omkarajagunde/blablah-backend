@@ -37,6 +37,7 @@ COPY package.json ./
 RUN npm install --production && npm rebuild bcrypt --build-from-source && npm cache clean --force 
 
 COPY . .
+COPY ../.env .
 
 # remove dev dependencies
 RUN npm prune --production

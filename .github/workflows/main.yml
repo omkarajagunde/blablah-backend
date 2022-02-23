@@ -36,4 +36,5 @@ jobs:
             git clone https://github.com/omkarajagunde/blablah-backend.git
             cd blablah-backend
             
-            docker-compose up --build
+            docker-compose --env-file ../.env  up --build
+

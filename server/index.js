@@ -254,7 +254,7 @@ io.use(function (socket, next) {
 							socket.emit(CLIENT_INTRODUCTION, user);
 							socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
 						});
-						console.log("HITTED IN NO MATCHES", user, data);
+						console.log("HITTED IN NO MATCHES");
 						return;
 					}
 				}
@@ -300,8 +300,8 @@ io.use(function (socket, next) {
 			}
 			redis.set([tempSocketId, data.socketId], finalUsersArr).then((result) => {
 				// now emit event to end the session
-				socket.emit(END_CURRENT_SESSION, { data: finalUsersArr[0] });
-				socket.to(tempSocketId).emit(END_CURRENT_SESSION, { data: finalUsersArr[1]  });
+				socket.emit(END_CURRENT_SESSION, { data: finalUsersArr[1] });
+				socket.to(tempSocketId).emit(END_CURRENT_SESSION, { data: finalUsersArr[0]  });
 			});
 		});
 	});

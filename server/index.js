@@ -9,6 +9,9 @@ var cookieParser = require("cookie-parser");
 const { Server } = require("socket.io");
 const { redis } = require("./routes/redisChacheLayer");
 const expressip = require("express-ip");
+const serverRequest = require('request-promise');
+
+
 
 var path = require("path");
 global.expressServerRoot = path.resolve(__dirname);
@@ -82,10 +85,15 @@ expressServer.post("/api/is/alive", logRequests, async (request, response) => {
 	// create and assign token
 	const token = jwt.sign({}, process.env.JWT_TOEKN_SECRET, { expiresIn: process.env.JWT_DEFAULT_EXPIRY });
 	response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", ipInfo: request.ipInfo, token });
-});
 
-expressServer.all("*", (req, res) => {
-	return handle(req, res);
+	// try{
+	// 	let resp = await serverRequest(`https://api.freegeoip.app/json/${request.ipInfo.ip}?apikey=${process.env.FREE_GEO_IP_API_KEY}`)
+	// 	response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", ipInfo: {...request.ipInfo, ...resp}, token });
+	// }catch(err){
+	// 	console.log(err)
+	// 	response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", ipInfo: request.ipInfo, token });
+	
+	// }
 });
 
 // Socket.io configuration
@@ -142,8 +150,8 @@ io.use(function (socket, next) {
 							// save updated values to cache
 							redis.set([user.mySocketId, data.mySocketId], [user, data]).then(() => {
 								// emit to both users
-								socket.emit(CLIENT_INTRODUCTION, data);
-								socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, user);
+								socket.emit(CLIENT_INTRODUCTION, user);
+								socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
 							});
 							console.log("HITTED IN ALL MATCHES");
 							return;
@@ -178,8 +186,8 @@ io.use(function (socket, next) {
 						// save updated values to cache
 						redis.set([user.mySocketId, data.mySocketId], [user, data]).then(() => {
 							// emit to both users
-							socket.emit(CLIENT_INTRODUCTION, data);
-							socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, user);
+							socket.emit(CLIENT_INTRODUCTION, user);
+							socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
 						});
 						console.log("HITTED IN GENDER MATCHES");
 						return;
@@ -217,8 +225,8 @@ io.use(function (socket, next) {
 							// save updated values to cache
 							redis.set([user.mySocketId, data.mySocketId], [user, data]).then(() => {
 								// emit to both users
-								socket.emit(CLIENT_INTRODUCTION, data);
-								socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, user);
+								socket.emit(CLIENT_INTRODUCTION, user);
+								socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
 							});
 							console.log("HITTED IN INTERESTS MATCHES");
 							return;
@@ -243,8 +251,8 @@ io.use(function (socket, next) {
 						// save updated values to cache
 						redis.set([user.mySocketId, data.mySocketId], [user, data]).then(() => {
 							// emit to both users
-							socket.emit(CLIENT_INTRODUCTION, data);
-							socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, user);
+							socket.emit(CLIENT_INTRODUCTION, user);
+							socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
 						});
 						console.log("HITTED IN NO MATCHES");
 						return;
@@ -288,11 +296,12 @@ io.use(function (socket, next) {
 				user.data.peerSocketId = "";
 				user.data.searchingPeer = false;
 				finalUsersArr.push(user);
+				console.log(user);
 			}
 			redis.set([tempSocketId, data.socketId], finalUsersArr).then((result) => {
 				// now emit event to end the session
-				socket.emit(END_CURRENT_SESSION, { data });
-				socket.to(tempSocketId).emit(END_CURRENT_SESSION, { data });
+				socket.emit(END_CURRENT_SESSION, { data: finalUsersArr[1] });
+				socket.to(tempSocketId).emit(END_CURRENT_SESSION, { data: finalUsersArr[0]  });
 			});
 		});
 	});

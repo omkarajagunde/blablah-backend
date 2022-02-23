@@ -43,4 +43,10 @@ RUN npm prune --production
 
 EXPOSE 8080
 
-CMD ["npm", "run", "prod"]
+#CMD ["npm", "run", "prod"]
+
+RUN npm install pm2 -g
+ENV PM2_PUBLIC_KEY op08ifwwstx3bd2
+ENV PM2_SECRET_KEY hhlaehfly8duzm0
+
+CMD ["pm2-runtime", "./server/index.js"]

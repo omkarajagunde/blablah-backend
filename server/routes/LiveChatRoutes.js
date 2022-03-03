@@ -52,10 +52,4 @@ router.post("/delete/smart/reply", logRequests, verifyTokenMiddleware, async (re
 	}
 });
 
-// [Domain]/api/chat/enablement/get/ads
-router.post("/get/ads", logRequests, async (request, response) => {
-	const { body } = request;
-	// Validating data
-});
-
 module.exports = router;

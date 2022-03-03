@@ -20,6 +20,8 @@ global.expressServerRoot = path.resolve(__dirname);
 const LiveChatRoutes = require("./routes/LiveChatRoutes");
 const AuthRoutes = require("./routes/AuthRoutes");
 const IdentityRoutes = require("./routes/IdentityRoutes");
+const AdCampaignRoutes = require("./routes/AdCampaignRoutes");
+
 
 // Socket event strings
 const CLIENT_INTRODUCTION = "CLIENT_INTRODUCTION";
@@ -58,12 +60,12 @@ const httpServer = http.createServer(expressServer);
 const io = new Server(httpServer, {
 	path: "/live",
 	cors: {
-		origin: "*",
+		origin: ["www.blablah.app", "https://www.blablah.app", "https://blablah.app", "*"],
 		methods: ["GET", "POST"],
 		credentials: true,
 	},
 	maxHttpBufferSize: 10e6,
-	transports: ["websocket"],
+	transports: ["websocket", "polling", "flashsocket"],
 });
 
 //Middlewares body parser
@@ -78,6 +80,7 @@ expressServer.use(cors());
 expressServer.use("/api/chat/enablement", LiveChatRoutes);
 expressServer.use("/api/admin/", AuthRoutes);
 expressServer.use("/api/chat/identity", IdentityRoutes);
+expressServer.use("/api/campaigns", AdCampaignRoutes)
 
 // api.[Domain]/api/is/alive
 expressServer.post("/api/is/alive", logRequests, async (request, response) => {
@@ -96,8 +99,8 @@ expressServer.post("/api/is/alive", logRequests, async (request, response) => {
 	// }
 });
 
+
 // Socket.io configuration
-io.on("error", (err) => console.log(err));
 io.use(function (socket, next) {
 	if (socket.handshake.query && socket.handshake.query.token) {
 		jwt.verify(socket.handshake.query.token, process.env.JWT_TOEKN_SECRET, function (err, decoded) {
@@ -109,6 +112,7 @@ io.use(function (socket, next) {
 		next(new Error("Authentication error"));
 	}
 }).on("connection", (socket) => {
+	socket.on("error", (err) => console.log(err));
 	socket.on(CLIENT_INTRODUCTION, async (data) => {
 		redis.set(data.mySocketId, data);
 		redis.keys("*").then(async (result) => {
@@ -262,6 +266,7 @@ io.use(function (socket, next) {
 				console.log("ERR :: ", err);
 			}
 
+			console.log("CLIENT_INTRODUCTION_PAIR_NOT_FOUND");
 			socket.emit(CLIENT_INTRODUCTION_PAIR_NOT_FOUND);
 		});
 	});
@@ -306,11 +311,17 @@ io.use(function (socket, next) {
 		});
 	});
 
-	socket.on("disconnecting", async (reason) => {
-		let user = await redis.get(socket.id);
-		user.data.peerSocketId = user.mySocketId;
-		socket.to(user.data.peerSocketId).emit(END_CURRENT_SESSION, { data: user });
-		redis.del(socket.id);
+	socket.on("disconnecting",  (reason) => {
+		redis.get(socket.id).then(user => {
+			if (user){
+				socket.to(user.data.peerSocketId).emit(END_CURRENT_SESSION, { data: user });
+				redis.del(socket.id).then(() => console.log("disconnected and deleted from redis cache :: ", socket.id)).catch(err => {
+					console.log("Error deleting - ", socket.id);
+				});
+			}
+		}).catch(err => {
+			console.log(err);
+		})
 	});
 });
 
@@ -327,6 +338,6 @@ httpServer.listen(8000, (err) => {
 		console.log("Server ERR :: ", err);
 		return;
 	}
-	console.log("Server up and running on 8080");
+	console.log("Server up and running on 8000");
 	redis.flushall().then(() => console.log("Flushed all redis cache"));
 });

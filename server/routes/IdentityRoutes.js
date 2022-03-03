@@ -1,15 +1,10 @@
 const { canvas, faceDetectionNet, faceDetectionOptions } = require("../helpers/ageAndGenderDetection");
 const faceapi = require("face-api.js");
 const router = require("express").Router();
-const AdminModel = require("../models/Admin");
-const UserModel = require("../models/User");
-const bcrypt = require("bcrypt");
-var jwt = require("jsonwebtoken");
-var mongoose = require("mongoose");
-const { logRequests } = require("./middlewares");
+const { verifyTokenMiddleware } = require("./middlewares");
 
 // api.[Domain]/api/chat/identity/agdetector
-router.post("/agdetector", async (request, response) => {
+router.post("/agdetector", verifyTokenMiddleware, async (request, response) => {
 	const { body } = request;
 
 	await faceDetectionNet.loadFromDisk(expressServerRoot + "/resources/");

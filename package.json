@@ -10,10 +10,12 @@
     "node": "14.x"
   },
   "dependencies": {
+    "@analytics/google-analytics": "^0.5.3",
     "@hapi/joi": "^17.1.1",
     "@tensorflow/tfjs-node": "^1.7.4",
     "@types/jasmine": "^3.5.9",
     "@types/node": "^13.9.2",
+    "analytics": "^0.8.0",
     "awesome-debounce-promise": "^2.1.0",
     "axios": "^0.21.1",
     "bcrypt": "^5.0.1",
@@ -29,6 +31,7 @@
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.12.0",
     "nanoid": "^3.1.22",
+    "node-cron": "^3.0.0",
     "nodemon": "^2.0.15",
     "pm2": "^5.1.2",
     "request": "^2.88.2",

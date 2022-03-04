@@ -10,7 +10,6 @@ const { Server } = require("socket.io");
 const { redis } = require("./routes/redisChacheLayer");
 const expressip = require("express-ip");
 const serverRequest = require('request-promise');
-const cron = require('node-cron');
 const analyticsLib = require('analytics').default
 const googleAnalytics = require('@analytics/google-analytics').default
 

@@ -69,6 +69,19 @@ const keys = (match) => {
 	});
 };
 
+const getAllKeyCount = (match) => {
+	return new Promise((resolve, reject) => {
+		client
+			.call("dbsize", (err, result) => {
+				if (err){
+					reject(`Err while command : dbsize : ${err}`);
+					return;
+				}
+				resolve(result)
+			})
+	});
+};
+
 const del = (key) => {
 	return new Promise((resolve, reject) => {
 		client
@@ -87,4 +100,4 @@ const flushall = () => {
 	});
 };
 
-module.exports = { redis: { get, set, keys, del, flushall } };
+module.exports = { redis: { get, set, keys, del, flushall, getAllKeyCount } };

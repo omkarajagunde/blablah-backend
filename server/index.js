@@ -10,8 +10,9 @@ const { Server } = require("socket.io");
 const { redis } = require("./routes/redisChacheLayer");
 const expressip = require("express-ip");
 const serverRequest = require('request-promise');
-
-
+const cron = require('node-cron');
+const analyticsLib = require('analytics').default
+const googleAnalytics = require('@analytics/google-analytics').default
 
 var path = require("path");
 global.expressServerRoot = path.resolve(__dirname);
@@ -31,9 +32,19 @@ const SEND_MESSAGE = "SEND_MESSAGE";
 const NEGATIVE_KEYWORD_EXCHANGE = "NEGATIVE_KEYWORD_EXCHANGE";
 const END_CURRENT_SESSION = "END_CURRENT_SESSION";
 const CLIENT_INTRODUCTION_PAIR_NOT_FOUND = "CLIENT_INTRODUCTION_PAIR_NOT_FOUND";
-
+  
 //initiate dotenv
 dotenv.config();
+
+//initialise GoogleAnalytcis
+const analytics = analyticsLib({
+	app: 'Blablah-server-analytics',
+	plugins: [
+	  googleAnalytics({
+		trackingId: process.env.UNIVERSAL_GA_TRACK_ID
+	  })
+	]
+})
 
 database.connect(process.env.DB_CONNECT, { useNewUrlParser: true, useUnifiedTopology: true }, () => console.log("connected to db..."));
 database.connection.on("connected", function () {
@@ -325,12 +336,92 @@ io.use(function (socket, next) {
 	});
 });
 
+// Job that will send realtime per minute stats of user sessions
+// var task = cron.schedule('* * * * *', async () =>  {
+// 	console.log('PER MINUTE ANALYTICS'.green);
+
+// 	let trackingObject = {}
+// 	let result = await redis.keys("*")
+// 	trackingObject["userCount"] = result.length
+
+
+
+// 	console.table(trackingObject)
+// 	analytics.track('RedisUserSessions', {
+// 		category: 'Videos',
+// 		label: 'Fall Campaign',
+// 		value: 42
+// 	})
+// });
+
+
+let interval = setInterval(async () => {
+	console.log('PER MINUTE ANALYTICS'.green);
+
+	let trackingObject = {}
+	let usersPairedCount = 0, usersNotPairedCount = 0, maleCount = 0, femaleCount = 0, anyCount = 0, resultArr = [];
+	resultArr = await redis.keys("*")
+
+	let users = await redis.get(resultArr)
+
+	// Total users count waiting to be paired
+	// Total users count that are paired already
+	// Total users count who are male
+	// Total users count who are female
+	// Total users count who are any
+	// Total user count
+	// interest wise users count
+
+	let interestsTracking = {}
+	users.forEach(user => {
+		if (user.data.peerFound) usersPairedCount ++
+		else usersNotPairedCount ++
+
+		if (user.data.myGender === "male") maleCount ++
+		if (user.data.myGender === "any") anyCount ++
+		if (user.data.myGender === "female") femaleCount ++
+
+		if (user.data.interests.length > 0){
+			user.data.interests.forEach(interest => {
+				if (interest in interestsTracking){
+					interestsTracking[interest] = interestsTracking[interest] + 1
+				} else {
+					interestsTracking[interest] = 0
+				}
+			})
+		}
+	})
+	trackingObject["userCount"] = resultArr.length
+	trackingObject["pairedCount"] = usersPairedCount
+	trackingObject["notPairedCount"] = usersNotPairedCount
+	trackingObject["activeSessionsCount"] = usersPairedCount / 2
+	trackingObject["maleCount"] = maleCount
+	trackingObject["femaleCount"] = femaleCount
+	trackingObject["anyCount"] = anyCount
+	trackingObject["interests"] = interestsTracking
+
+
+	console.table(trackingObject.interests)
+	delete trackingObject.interests
+	console.table(trackingObject)
+	// analytics.track('RedisUserSessions', {
+	// 	category: 'SessionTracking',
+	// 	label: 'Fall Campaign',
+	// 	value: 42
+	// })
+}, process.env.REALTIME_TRACKING_TIMEOUT);
+
+
 httpServer.on("close", function () {
 	redis.flushall().then(() => console.log("Flushed all redis cache"));
+	//task.destroy();
+	clearInterval(interval)
 });
 
 process.on("SIGINT", function () {
 	httpServer.close();
+	//task.destroy();
+	clearInterval(interval)
 });
 
 httpServer.listen(8000, (err) => {

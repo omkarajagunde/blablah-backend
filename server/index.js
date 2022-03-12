@@ -21,6 +21,7 @@ const LiveChatRoutes = require("./routes/LiveChatRoutes");
 const AuthRoutes = require("./routes/AuthRoutes");
 const IdentityRoutes = require("./routes/IdentityRoutes");
 const AdCampaignRoutes = require("./routes/AdCampaignRoutes");
+const { user } = require("./models/Admin");
 
 
 // Socket event strings
@@ -248,10 +249,10 @@ io.use(function (socket, next) {
 					}
 				}
 
-				// Connect with anyone
+				// Connect with anyone if connectWithAnyone flag is enabled
 				for (const userId of result) {
 					let user = await redis.get(userId);
-					if (!user.data.peerFound && user.data.searchingPeer && user.data.peerSocketId === "" && user.mySocketId !== data.mySocketId) {
+					if (data.data.connectWithAnyone && user.data.connectWithAnyone && !user.data.peerFound && user.data.searchingPeer && user.data.peerSocketId === "" && user.mySocketId !== data.mySocketId) {
 						// to calling socket id
 						data.data.peerFound = true;
 						data.data.peerSocketId = user.mySocketId;
@@ -311,7 +312,6 @@ io.use(function (socket, next) {
 				user.data.peerSocketId = "";
 				user.data.searchingPeer = false;
 				finalUsersArr.push(user);
-				console.log(user);
 			}
 			redis.set([tempSocketId, data.socketId], finalUsersArr).then((result) => {
 				// now emit event to end the session
@@ -385,7 +385,7 @@ let interval = setInterval(async () => {
 				if (interest in interestsTracking){
 					interestsTracking[interest] = interestsTracking[interest] + 1
 				} else {
-					interestsTracking[interest] = 0
+					interestsTracking[interest] = 1
 				}
 			})
 		}

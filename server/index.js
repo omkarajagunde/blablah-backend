@@ -46,6 +46,8 @@ const analytics = analyticsLib({
 	]
 })
 
+let trackingObject = {}
+
 database.connect(process.env.DB_CONNECT, { useNewUrlParser: true, useUnifiedTopology: true }, () => console.log("connected to db..."));
 database.connection.on("connected", function () {
 	console.log("Mongoose default connection is open to ", process.env.DB_CONNECT);
@@ -108,6 +110,12 @@ expressServer.post("/api/is/alive", logRequests, async (request, response) => {
 	// 	response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", ipInfo: request.ipInfo, token });
 	
 	// }
+});
+
+
+// api.[Domain]/api/is/alive
+expressServer.get("/api/platform/stats", logRequests, async (request, response) => {
+	response.status(200).send({ status: 200, message: "Stats sent successfully", data: trackingObject });
 });
 
 
@@ -335,29 +343,9 @@ io.use(function (socket, next) {
 	});
 });
 
-// Job that will send realtime per minute stats of user sessions
-// var task = cron.schedule('* * * * *', async () =>  {
-// 	console.log('PER MINUTE ANALYTICS'.green);
-
-// 	let trackingObject = {}
-// 	let result = await redis.keys("*")
-// 	trackingObject["userCount"] = result.length
-
-
-
-// 	console.table(trackingObject)
-// 	analytics.track('RedisUserSessions', {
-// 		category: 'Videos',
-// 		label: 'Fall Campaign',
-// 		value: 42
-// 	})
-// });
-
-
 let interval = setInterval(async () => {
 	console.log('PER MINUTE ANALYTICS'.green);
 
-	let trackingObject = {}
 	let usersPairedCount = 0, usersNotPairedCount = 0, maleCount = 0, femaleCount = 0, anyCount = 0, resultArr = [];
 	resultArr = await redis.keys("*")
 

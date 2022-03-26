@@ -37,5 +37,9 @@ jobs:
             cd blablah-backend
             cp ../.env .
             
-            docker-compose --env-file ../.env  up --build
+            docker-compose --env-file ../.env  up -d --build
+            
+            # Go inside sql folder and for Umami analytics to work give schema file seperately to db
+            cd sql
+            docker exec -i blablah-backend_db_1 psql -U umami -d umami < schema.postgresql.sql
 

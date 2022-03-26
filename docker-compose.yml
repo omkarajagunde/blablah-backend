@@ -33,7 +33,7 @@ services:
     ports:
       - 80:80
       - 443:443
-  # Nodejs ExpressJs Socket.io app to server chat sessions
+  # Nodejs ExpressJs Socket.io app to server chat session
   blablah-node-app:
     build: .
     ports:

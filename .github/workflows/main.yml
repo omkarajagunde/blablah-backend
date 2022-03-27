@@ -38,4 +38,9 @@ jobs:
             cp ../.env .
             
             docker-compose --env-file ../.env  up --build
+            
+            #If postgresql errors given by Umami is please use follwoing code
+            #docker-compose --env-file ../.env  up -d --build
+            #cd sql 
+            #docker exec -i blablah-backend_db_1  psql -U umami -d umami < schema.postgresql.sql
 

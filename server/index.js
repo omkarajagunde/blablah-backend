@@ -106,14 +106,15 @@ expressServer.post("/api/is/alive", logRequests, async (request, response) => {
 	const token = jwt.sign({}, process.env.JWT_TOEKN_SECRET, {
 		expiresIn: process.env.JWT_DEFAULT_EXPIRY
 	});
+	return response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", ipInfo: request.ipInfo, token });
 
-	try {
-		let resp = await serverRequest(`https://us-central1-notzillow.cloudfunctions.net/getCoordinates`);
-		response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", token });
-	} catch (err) {
-		console.log(err);
-		response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", token });
-	}
+	// try {
+	// 	let resp = await serverRequest(`https://us-central1-notzillow.cloudfunctions.net/getCoordinates`);
+	// 	response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", token });
+	// } catch (err) {
+	// 	console.log(err);
+	// 	response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", token });
+	// }
 });
 
 // api.[Domain]/api/platform/stats

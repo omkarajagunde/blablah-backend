@@ -32,6 +32,9 @@ const NEGATIVE_KEYWORD_EXCHANGE = "NEGATIVE_KEYWORD_EXCHANGE";
 const END_CURRENT_SESSION = "END_CURRENT_SESSION";
 const CLIENT_INTRODUCTION_PAIR_NOT_FOUND = "CLIENT_INTRODUCTION_PAIR_NOT_FOUND";
 
+process.env["mongo_status"] = "OFF";
+process.env["redis_status"] = "ON";
+
 //initiate dotenv
 dotenv.config();
 
@@ -47,7 +50,10 @@ const analytics = analyticsLib({
 
 let trackingObject = {};
 
-database.connect(process.env.DB_CONNECT, { useNewUrlParser: true, useUnifiedTopology: true }, () => console.log("connected to db..."));
+database.connect(process.env.DB_CONNECT, { useNewUrlParser: true, useUnifiedTopology: true }, () => {
+	console.log("connected to db...");
+	process.env["mongo_status"] = "ON";
+});
 database.connection.on("connected", function () {
 	console.log("Mongoose default connection is open to ", process.env.DB_CONNECT);
 });
@@ -110,12 +116,22 @@ expressServer.post("/api/is/alive", logRequests, async (request, response) => {
 	}
 });
 
-// api.[Domain]/api/is/alive
+// api.[Domain]/api/platform/stats
 expressServer.get("/api/platform/stats", logRequests, async (request, response) => {
 	response.status(200).send({
 		status: 200,
 		message: "Stats sent successfully",
 		data: trackingObject
+	});
+});
+
+// api.[Domain]/healthCheck
+expressServer.get("/healthCheck", logRequests, async (request, response) => {
+	response.status(200).send({
+		status: 200,
+		message: "Server is Up and Running",
+		mongo: process.env.mongo_status,
+		redis: process.env.redis_status
 	});
 });
 

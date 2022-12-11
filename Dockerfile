@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y xz-utils \
     curl \
     g++ \
     python3 \
+    redis-server \
     ;
 
 ENV NODE_VERSION 14.18.2
@@ -40,6 +41,7 @@ COPY . .
 
 # remove dev dependencies
 RUN npm prune --production
+RUN redis-server &
 
 EXPOSE 8080
 

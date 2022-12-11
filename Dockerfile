@@ -41,7 +41,7 @@ COPY . .
 
 # remove dev dependencies
 RUN npm prune --production
-RUN redis-server &
+RUN nohup redis-server &
 
 EXPOSE 8080
 

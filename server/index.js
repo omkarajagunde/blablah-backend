@@ -9,9 +9,9 @@ var cookieParser = require("cookie-parser");
 const { Server } = require("socket.io");
 const { redis } = require("./routes/redisChacheLayer");
 const expressip = require("express-ip");
-const serverRequest = require('request-promise');
-const analyticsLib = require('analytics').default
-const googleAnalytics = require('@analytics/google-analytics').default
+const serverRequest = require("request-promise");
+const analyticsLib = require("analytics").default;
+const googleAnalytics = require("@analytics/google-analytics").default;
 
 var path = require("path");
 global.expressServerRoot = path.resolve(__dirname);
@@ -23,7 +23,6 @@ const IdentityRoutes = require("./routes/IdentityRoutes");
 const AdCampaignRoutes = require("./routes/AdCampaignRoutes");
 const { user } = require("./models/Admin");
 
-
 // Socket event strings
 const CLIENT_INTRODUCTION = "CLIENT_INTRODUCTION";
 const PEER_STARTED_TYPING = "PEER_STARTED_TYPING";
@@ -32,21 +31,21 @@ const SEND_MESSAGE = "SEND_MESSAGE";
 const NEGATIVE_KEYWORD_EXCHANGE = "NEGATIVE_KEYWORD_EXCHANGE";
 const END_CURRENT_SESSION = "END_CURRENT_SESSION";
 const CLIENT_INTRODUCTION_PAIR_NOT_FOUND = "CLIENT_INTRODUCTION_PAIR_NOT_FOUND";
-  
+
 //initiate dotenv
 dotenv.config();
 
 //initialise GoogleAnalytcis
 const analytics = analyticsLib({
-	app: 'Blablah-server-analytics',
+	app: "Blablah-server-analytics",
 	plugins: [
-	  googleAnalytics({
-		trackingId: process.env.UNIVERSAL_GA_TRACK_ID
-	  })
+		googleAnalytics({
+			trackingId: process.env.UNIVERSAL_GA_TRACK_ID
+		})
 	]
-})
+});
 
-let trackingObject = {}
+let trackingObject = {};
 
 database.connect(process.env.DB_CONNECT, { useNewUrlParser: true, useUnifiedTopology: true }, () => console.log("connected to db..."));
 database.connection.on("connected", function () {
@@ -75,10 +74,10 @@ const io = new Server(httpServer, {
 	cors: {
 		origin: ["www.blablah.app", "https://www.blablah.app", "https://blablah.app", "*"],
 		methods: ["GET", "POST"],
-		credentials: true,
+		credentials: true
 	},
 	maxHttpBufferSize: 10e6,
-	transports: ["websocket", "polling", "flashsocket"],
+	transports: ["websocket", "polling", "flashsocket"]
 });
 
 //Middlewares body parser
@@ -93,31 +92,32 @@ expressServer.use(cors());
 expressServer.use("/api/chat/enablement", LiveChatRoutes);
 expressServer.use("/api/admin/", AuthRoutes);
 expressServer.use("/api/chat/identity", IdentityRoutes);
-expressServer.use("/api/campaigns", AdCampaignRoutes)
+expressServer.use("/api/campaigns", AdCampaignRoutes);
 
 // api.[Domain]/api/is/alive
 expressServer.post("/api/is/alive", logRequests, async (request, response) => {
-	const { body } = request;
 	// create and assign token
-	const token = jwt.sign({}, process.env.JWT_TOEKN_SECRET, { expiresIn: process.env.JWT_DEFAULT_EXPIRY });
-	response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", ipInfo: request.ipInfo, token });
+	const token = jwt.sign({}, process.env.JWT_TOEKN_SECRET, {
+		expiresIn: process.env.JWT_DEFAULT_EXPIRY
+	});
 
-	// try{
-	// 	let resp = await serverRequest(`https://api.freegeoip.app/json/${request.ipInfo.ip}?apikey=${process.env.FREE_GEO_IP_API_KEY}`)
-	// 	response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", ipInfo: {...request.ipInfo, ...resp}, token });
-	// }catch(err){
-	// 	console.log(err)
-	// 	response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", ipInfo: request.ipInfo, token });
-	
-	// }
+	try {
+		let resp = await serverRequest(`https://us-central1-notzillow.cloudfunctions.net/getCoordinates`);
+		response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", token });
+	} catch (err) {
+		console.log(err);
+		response.status(200).send({ status: 200, message: "Server is up and running, status is healthy", token });
+	}
 });
-
 
 // api.[Domain]/api/is/alive
 expressServer.get("/api/platform/stats", logRequests, async (request, response) => {
-	response.status(200).send({ status: 200, message: "Stats sent successfully", data: trackingObject });
+	response.status(200).send({
+		status: 200,
+		message: "Stats sent successfully",
+		data: trackingObject
+	});
 });
-
 
 // Socket.io configuration
 io.use(function (socket, next) {
@@ -260,7 +260,14 @@ io.use(function (socket, next) {
 				// Connect with anyone if connectWithAnyone flag is enabled
 				for (const userId of result) {
 					let user = await redis.get(userId);
-					if (data.data.connectWithAnyone && user.data.connectWithAnyone && !user.data.peerFound && user.data.searchingPeer && user.data.peerSocketId === "" && user.mySocketId !== data.mySocketId) {
+					if (
+						data.data.connectWithAnyone &&
+						user.data.connectWithAnyone &&
+						!user.data.peerFound &&
+						user.data.searchingPeer &&
+						user.data.peerSocketId === "" &&
+						user.mySocketId !== data.mySocketId
+					) {
 						// to calling socket id
 						data.data.peerFound = true;
 						data.data.peerSocketId = user.mySocketId;
@@ -324,32 +331,43 @@ io.use(function (socket, next) {
 			redis.set([tempSocketId, data.socketId], finalUsersArr).then((result) => {
 				// now emit event to end the session
 				socket.emit(END_CURRENT_SESSION, { data: finalUsersArr[1] });
-				socket.to(tempSocketId).emit(END_CURRENT_SESSION, { data: finalUsersArr[0]  });
+				socket.to(tempSocketId).emit(END_CURRENT_SESSION, { data: finalUsersArr[0] });
 			});
 		});
 	});
 
-	socket.on("disconnecting",  (reason) => {
-		redis.get(socket.id).then(user => {
-			if (user){
-				socket.to(user.data.peerSocketId).emit(END_CURRENT_SESSION, { data: user });
-				redis.del(socket.id).then(() => console.log("disconnected and deleted from redis cache :: ", socket.id)).catch(err => {
-					console.log("Error deleting - ", socket.id);
-				});
-			}
-		}).catch(err => {
-			console.log(err);
-		})
+	socket.on("disconnecting", (reason) => {
+		redis
+			.get(socket.id)
+			.then((user) => {
+				if (user) {
+					socket.to(user.data.peerSocketId).emit(END_CURRENT_SESSION, { data: user });
+					redis
+						.del(socket.id)
+						.then(() => console.log("disconnected and deleted from redis cache :: ", socket.id))
+						.catch((err) => {
+							console.log("Error deleting - ", socket.id);
+						});
+				}
+			})
+			.catch((err) => {
+				console.log(err);
+			});
 	});
 });
 
 let interval = setInterval(async () => {
-	console.log('PER MINUTE ANALYTICS'.green);
+	console.log("PER MINUTE ANALYTICS".green);
 
-	let usersPairedCount = 0, usersNotPairedCount = 0, maleCount = 0, femaleCount = 0, anyCount = 0, resultArr = [];
-	resultArr = await redis.keys("*")
+	let usersPairedCount = 0,
+		usersNotPairedCount = 0,
+		maleCount = 0,
+		femaleCount = 0,
+		anyCount = 0,
+		resultArr = [];
+	resultArr = await redis.keys("*");
 
-	let users = await redis.get(resultArr)
+	let users = await redis.get(resultArr);
 
 	// Total users count waiting to be paired
 	// Total users count that are paired already
@@ -359,38 +377,37 @@ let interval = setInterval(async () => {
 	// Total user count
 	// interest wise users count
 
-	let interestsTracking = {}
-	users.forEach(user => {
-		if (user.data.peerFound) usersPairedCount ++
-		else usersNotPairedCount ++
+	let interestsTracking = {};
+	users.forEach((user) => {
+		if (user.data.peerFound) usersPairedCount++;
+		else usersNotPairedCount++;
 
-		if (user.data.myGender === "male") maleCount ++
-		if (user.data.myGender === "any") anyCount ++
-		if (user.data.myGender === "female") femaleCount ++
+		if (user.data.myGender === "male") maleCount++;
+		if (user.data.myGender === "any") anyCount++;
+		if (user.data.myGender === "female") femaleCount++;
 
-		if (user.data.interests.length > 0){
-			user.data.interests.forEach(interest => {
-				if (interest in interestsTracking){
-					interestsTracking[interest] = interestsTracking[interest] + 1
+		if (user.data.interests.length > 0) {
+			user.data.interests.forEach((interest) => {
+				if (interest in interestsTracking) {
+					interestsTracking[interest] = interestsTracking[interest] + 1;
 				} else {
-					interestsTracking[interest] = 1
+					interestsTracking[interest] = 1;
 				}
-			})
+			});
 		}
-	})
-	trackingObject["userCount"] = resultArr.length
-	trackingObject["pairedCount"] = usersPairedCount
-	trackingObject["notPairedCount"] = usersNotPairedCount
-	trackingObject["activeSessionsCount"] = usersPairedCount / 2
-	trackingObject["maleCount"] = maleCount
-	trackingObject["femaleCount"] = femaleCount
-	trackingObject["anyCount"] = anyCount
-	trackingObject["interests"] = interestsTracking
+	});
+	trackingObject["userCount"] = resultArr.length;
+	trackingObject["pairedCount"] = usersPairedCount;
+	trackingObject["notPairedCount"] = usersNotPairedCount;
+	trackingObject["activeSessionsCount"] = usersPairedCount / 2;
+	trackingObject["maleCount"] = maleCount;
+	trackingObject["femaleCount"] = femaleCount;
+	trackingObject["anyCount"] = anyCount;
+	trackingObject["interests"] = interestsTracking;
 
-
-	console.table(trackingObject.interests)
-	delete trackingObject.interests
-	console.table(trackingObject)
+	console.table(trackingObject.interests);
+	delete trackingObject.interests;
+	console.table(trackingObject);
 	// analytics.track('RedisUserSessions', {
 	// 	category: 'SessionTracking',
 	// 	label: 'Fall Campaign',
@@ -398,17 +415,16 @@ let interval = setInterval(async () => {
 	// })
 }, process.env.REALTIME_TRACKING_TIMEOUT);
 
-
 httpServer.on("close", function () {
 	redis.flushall().then(() => console.log("Flushed all redis cache"));
 	//task.destroy();
-	clearInterval(interval)
+	clearInterval(interval);
 });
 
 process.on("SIGINT", function () {
 	httpServer.close();
 	//task.destroy();
-	clearInterval(interval)
+	clearInterval(interval);
 });
 
 httpServer.listen(8000, (err) => {

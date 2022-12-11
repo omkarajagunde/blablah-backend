@@ -71,14 +71,13 @@ const keys = (match) => {
 
 const getAllKeyCount = (match) => {
 	return new Promise((resolve, reject) => {
-		client
-			.call("dbsize", (err, result) => {
-				if (err){
-					reject(`Err while command : dbsize : ${err}`);
-					return;
-				}
-				resolve(result)
-			})
+		client.call("dbsize", (err, result) => {
+			if (err) {
+				reject(`Err while command : dbsize : ${err}`);
+				return;
+			}
+			resolve(result);
+		});
 	});
 };
 

@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "start": "nodemon --max-old-space-size=4096 ./server/index.js",
+    "dev-with-redis": "npx kill-port 6379 8000 && redis-server & nodemon --max-old-space-size=4096 ./server/index.js",
     "prod": "node --max-old-space-size=4096 ./server/index.js",
     "lint": "next lint"
   },

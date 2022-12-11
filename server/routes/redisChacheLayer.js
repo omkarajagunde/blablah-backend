@@ -3,6 +3,9 @@ const dotenv = require("dotenv");
 //initiate dotenv
 dotenv.config();
 var client = new Redis(6379, process.env.REDIS_SERVER_URI);
+client.on("connect", () => {
+	process.env["redis_status"] = "ON";
+});
 
 const set = (key, value) => {
 	if (Array.isArray(value) && Array.isArray(key)) {
@@ -71,14 +74,13 @@ const keys = (match) => {
 
 const getAllKeyCount = (match) => {
 	return new Promise((resolve, reject) => {
-		client
-			.call("dbsize", (err, result) => {
-				if (err){
-					reject(`Err while command : dbsize : ${err}`);
-					return;
-				}
-				resolve(result)
-			})
+		client.call("dbsize", (err, result) => {
+			if (err) {
+				reject(`Err while command : dbsize : ${err}`);
+				return;
+			}
+			resolve(result);
+		});
 	});
 };
 

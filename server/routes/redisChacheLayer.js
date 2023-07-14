@@ -40,7 +40,7 @@ const set = (key, value) => {
 };
 
 const get = (key) => {
-	if (Array.isArray(key)) {
+	if (Array.isArray(key) && key.length > 0) {
 		return new Promise((resolve, reject) => {
 			client
 				.mget([...key])

@@ -5,6 +5,7 @@ const express = require("express");
 const { logRequests } = require("./routes/middlewares");
 const http = require("http");
 var jwt = require("jsonwebtoken");
+const { ExpressPeerServer } = require("peer");
 var cookieParser = require("cookie-parser");
 const { Server } = require("socket.io");
 const { redis } = require("./routes/redisChacheLayer");
@@ -75,12 +76,27 @@ process.on("SIGINT", function () {
 
 const expressServer = express();
 const httpServer = http.createServer(expressServer);
+// const peerServer = ExpressPeerServer(httpServer, {
+// 	debug: true,
+// 	path: "/"
+// });
+
+// expressServer.use("/peerjs", peerServer);
+
+// peerServer.on("connection", (client) => {
+// 	console.log("PeerServer Connection new client - ", client.id);
+// });
+
+// peerServer.on("disconnect", (client) => {
+// 	console.log("PeerServer disconnect new client - ", client.id);
+// });
+
 const io = new Server(httpServer, {
 	path: "/live",
 	cors: {
 		origin: ["www.blablah.app", "https://www.blablah.app", "https://blablah.app", "*"],
 		methods: ["GET", "POST"],
-		credentials: true
+		credentials: false
 	},
 	maxHttpBufferSize: 10e6,
 	transports: ["websocket", "polling", "flashsocket"]

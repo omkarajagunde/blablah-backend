@@ -20,7 +20,6 @@ global.expressServerRoot = path.resolve(__dirname);
 //import Routes
 const LiveChatRoutes = require("./routes/LiveChatRoutes");
 const AuthRoutes = require("./routes/AuthRoutes");
-const IdentityRoutes = require("./routes/IdentityRoutes");
 const AdCampaignRoutes = require("./routes/AdCampaignRoutes");
 const { user } = require("./models/Admin");
 
@@ -113,7 +112,6 @@ expressServer.use(cors());
 //route middlewares
 expressServer.use("/api/chat/enablement", LiveChatRoutes);
 expressServer.use("/api/admin/", AuthRoutes);
-expressServer.use("/api/chat/identity", IdentityRoutes);
 expressServer.use("/api/campaigns", AdCampaignRoutes);
 
 // api.[Domain]/api/is/alive

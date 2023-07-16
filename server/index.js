@@ -356,9 +356,11 @@ io.use(function (socket, next) {
 			.then(async (users) => {
 				let finalUsersArr = [];
 				for (let user of users) {
-					user.data.peerFound = false;
-					user.data.peerSocketId = "";
-					user.data.searchingPeer = false;
+					if (user.data) {
+						user.data.peerFound = false;
+						user.data.peerSocketId = "";
+						user.data.searchingPeer = false;
+					}
 					finalUsersArr.push(user);
 				}
 				redis.set([tempSocketId, data.socketId], finalUsersArr).then((result) => {

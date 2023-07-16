@@ -462,7 +462,7 @@ httpServer.on("close", function () {
 });
 
 process.on("uncaughtException", (error) => {
-	logger.error("uncaughtException :: ", error, error?.name, error?.stack);
+	console.log("uncaughtException :: ", error, error?.name, error?.stack);
 });
 
 process.on("SIGINT", function () {

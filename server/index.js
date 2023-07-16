@@ -351,20 +351,25 @@ io.use(function (socket, next) {
 
 	socket.on(END_CURRENT_SESSION, (data) => {
 		let tempSocketId = data.data.peerSocketId;
-		redis.get([tempSocketId, data.socketId]).then(async (users) => {
-			let finalUsersArr = [];
-			for (let user of users) {
-				user.data.peerFound = false;
-				user.data.peerSocketId = "";
-				user.data.searchingPeer = false;
-				finalUsersArr.push(user);
-			}
-			redis.set([tempSocketId, data.socketId], finalUsersArr).then((result) => {
-				// now emit event to end the session
-				socket.emit(END_CURRENT_SESSION, { data: finalUsersArr[1] });
-				socket.to(tempSocketId).emit(END_CURRENT_SESSION, { data: finalUsersArr[0] });
+		redis
+			.get([tempSocketId, data.socketId])
+			.then(async (users) => {
+				let finalUsersArr = [];
+				for (let user of users) {
+					user.data.peerFound = false;
+					user.data.peerSocketId = "";
+					user.data.searchingPeer = false;
+					finalUsersArr.push(user);
+				}
+				redis.set([tempSocketId, data.socketId], finalUsersArr).then((result) => {
+					// now emit event to end the session
+					socket.emit(END_CURRENT_SESSION, { data: finalUsersArr[1] });
+					socket.to(tempSocketId).emit(END_CURRENT_SESSION, { data: finalUsersArr[0] });
+				});
+			})
+			.catch((err) => {
+				console.log("Error -- ", err);
 			});
-		});
 	});
 
 	socket.on("disconnecting", (reason) => {
@@ -395,10 +400,14 @@ let interval = setInterval(async () => {
 		maleCount = 0,
 		femaleCount = 0,
 		anyCount = 0,
-		resultArr = [];
-	resultArr = await redis.keys("*");
-
-	let users = await redis.get(resultArr);
+		resultArr = [],
+		users = null;
+	try {
+		resultArr = await redis.keys("*");
+		users = await redis.get(resultArr);
+	} catch (err) {
+		console.log("Err -- ", err);
+	}
 
 	// Total users count waiting to be paired
 	// Total users count that are paired already
@@ -450,6 +459,10 @@ httpServer.on("close", function () {
 	redis.flushall().then(() => console.log("Flushed all redis cache"));
 	//task.destroy();
 	clearInterval(interval);
+});
+
+process.on("uncaughtException", (error) => {
+	logger.error("uncaughtException :: ", error, error?.name, error?.stack);
 });
 
 process.on("SIGINT", function () {

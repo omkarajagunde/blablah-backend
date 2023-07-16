@@ -373,6 +373,31 @@ io.use(function (socket, next) {
 	});
 
 	socket.on("disconnecting", (reason) => {
+		let peerSocketId = data.data.peerSocketId;
+		redis
+			.get(peerSocketId)
+			.then(async (user) => {
+				user.data.peerFound = false;
+				user.data.peerSocketId = "";
+				user.data.searchingPeer = false;
+				redis.set(peerSocketId, user).then((result) => {
+					redis
+						.del(socket.id)
+						.then(() => {
+							console.log("disconnected and deleted from redis cache :: ", socket.id);
+							// now emit event to end the session
+							socket.emit(END_CURRENT_SESSION, { data: user });
+							socket.to(peerSocketId).emit(END_CURRENT_SESSION, { data: user });
+						})
+						.catch((err) => {
+							console.log("Error deleting - ", socket.id);
+						});
+				});
+			})
+			.catch((err) => {
+				console.log("Error -- ", err);
+			});
+
 		redis
 			.get(socket.id)
 			.then((user) => {
@@ -380,7 +405,11 @@ io.use(function (socket, next) {
 					socket.to(user.data.peerSocketId).emit(END_CURRENT_SESSION, { data: user });
 					redis
 						.del(socket.id)
-						.then(() => console.log("disconnected and deleted from redis cache :: ", socket.id))
+						.then(() => {
+							console.log("disconnected and deleted from redis cache :: ", socket.id);
+							//socket.emit(END_CURRENT_SESSION, user);
+							socket.to(user.data.peerSocketId).emit(END_CURRENT_SESSION, { data: user });
+						})
 						.catch((err) => {
 							console.log("Error deleting - ", socket.id);
 						});

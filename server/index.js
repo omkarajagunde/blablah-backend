@@ -397,27 +397,6 @@ io.use(function (socket, next) {
 		} catch (error) {
 			console.log("Error while disconnecting the user - ", error);
 		}
-
-		// redis
-		// 	.get(socket.id)
-		// 	.then((user) => {
-		// 		if (user) {
-		// 			socket.to(user.data.peerSocketId).emit(END_CURRENT_SESSION, { data: user });
-		// 			redis
-		// 				.del(socket.id)
-		// 				.then(() => {
-		// 					console.log("disconnected and deleted from redis cache :: ", socket.id);
-		// 					//socket.emit(END_CURRENT_SESSION, user);
-		// 					socket.to(user.data.peerSocketId).emit(END_CURRENT_SESSION, { data: user });
-		// 				})
-		// 				.catch((err) => {
-		// 					console.log("Error deleting - ", socket.id);
-		// 				});
-		// 		}
-		// 	})
-		// 	.catch((err) => {
-		// 		console.log(err);
-		// 	});
 	});
 });
 
@@ -430,7 +409,7 @@ let interval = setInterval(async () => {
 		femaleCount = 0,
 		anyCount = 0,
 		resultArr = [],
-		users = null;
+		users = [];
 	try {
 		resultArr = await redis.keys("*");
 		users = await redis.get(resultArr);

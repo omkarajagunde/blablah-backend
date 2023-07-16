@@ -150,6 +150,35 @@ expressServer.get("/healthCheck", logRequests, async (request, response) => {
 	});
 });
 
+const killSocket = async (socket) => {
+	try {
+		let user = await redis.get(socket.id);
+		let peerSocketId = user.data.peerSocketId;
+		let peer = await redis.get(peerSocketId);
+
+		if (peer && peer.data) {
+			peer.data.peerFound = false;
+			peer.data.peerSocketId = "";
+			peer.data.searchingPeer = false;
+		}
+
+		if (user && user.data) {
+			user.data.peerFound = false;
+			user.data.peerSocketId = "";
+			user.data.searchingPeer = false;
+		}
+
+		await redis.set(peerSocketId, user);
+		await redis.del(socket.id);
+		console.log("disconnected and deleted from redis cache :: ", socket.id);
+		// now emit event to end the session
+		socket.emit(END_CURRENT_SESSION, { data: peer });
+		socket.to(peerSocketId).emit(END_CURRENT_SESSION, { data: user });
+	} catch (error) {
+		console.log("Error while disconnecting the user - ", error);
+	}
+};
+
 // Socket.io configuration
 io.use(function (socket, next) {
 	if (socket.handshake.query && socket.handshake.query.token) {
@@ -374,29 +403,12 @@ io.use(function (socket, next) {
 			});
 	});
 
+	socket.on("disconnect", async (reason) => {
+		killSocket(socket);
+	});
+
 	socket.on("disconnecting", async (reason) => {
-		try {
-			let user = await redis.get(socket.id);
-			let peerSocketId = user.data.peerSocketId;
-			let peer = await redis.get(peerSocketId);
-
-			peer.data.peerFound = false;
-			peer.data.peerSocketId = "";
-			peer.data.searchingPeer = false;
-
-			user.data.peerFound = false;
-			user.data.peerSocketId = "";
-			user.data.searchingPeer = false;
-
-			await redis.set(peerSocketId, user);
-			await redis.del(socket.id);
-			console.log("disconnected and deleted from redis cache :: ", socket.id);
-			// now emit event to end the session
-			socket.emit(END_CURRENT_SESSION, { data: peer });
-			socket.to(peerSocketId).emit(END_CURRENT_SESSION, { data: user });
-		} catch (error) {
-			console.log("Error while disconnecting the user - ", error);
-		}
+		killSocket(socket);
 	});
 });
 

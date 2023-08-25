@@ -1,48 +1,33 @@
 {
-	"name": "blabla-client",
+	"name": "blabla-server",
 	"private": true,
 	"scripts": {
-		"start": "nodemon --max-old-space-size=4096 ./server/index.js",
+		"start": "node --max-old-space-size=4096 --inspect ./server/index.js",
 		"dev-with-redis": "npx kill-port 6379 8000 && redis-server & nodemon --max-old-space-size=4096 ./server/index.js",
 		"prod": "node --max-old-space-size=4096 ./server/index.js",
 		"lint": "next lint"
 	},
 	"engines": {
-		"node": "14.x"
+		"node": "18.x"
 	},
 	"dependencies": {
-		"@analytics/google-analytics": "^0.5.3",
 		"@hapi/joi": "^17.1.1",
 		"@types/jasmine": "^3.5.9",
 		"@types/node": "^13.9.2",
-		"analytics": "^0.8.0",
-		"awesome-debounce-promise": "^2.1.0",
-		"axios": "^0.21.1",
 		"bcrypt": "^5.0.1",
-		"canvas": "^2.8.0",
 		"colors": "^1.4.0",
 		"cookie-parser": "^1.4.6",
 		"cors": "^2.8.5",
 		"dotenv": "^8.2.0",
 		"express": "^4.17.2",
 		"express-ip": "^1.0.4",
-		"face-api.js": "^0.22.2",
 		"ioredis": "^4.28.3",
 		"jsonwebtoken": "^8.5.1",
 		"mongoose": "^5.12.0",
-		"nanoid": "^3.1.22",
-		"node-cron": "^3.0.0",
 		"nodemon": "^2.0.15",
-		"peer": "^0.6.1",
-		"pm2": "^5.1.2",
 		"request": "^2.88.2",
 		"request-promise": "^4.2.6",
-		"seedrandom": "^2.4.4",
-		"socket.io": "^4.4.0",
-		"socket.io-p2p-server": "^1.2.0",
-		"swagger-jsdoc": "^7.0.0-rc.6",
-		"swagger-ui-express": "^4.1.6",
-		"throttle-debounce": "^3.0.1"
+		"socket.io": "^4.4.0"
 	},
 	"devDependencies": {
 		"eslint": "7",

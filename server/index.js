@@ -5,14 +5,10 @@ const express = require("express");
 const { logRequests } = require("./routes/middlewares");
 const http = require("http");
 var jwt = require("jsonwebtoken");
-const { ExpressPeerServer } = require("peer");
 var cookieParser = require("cookie-parser");
 const { Server } = require("socket.io");
 const { redis } = require("./routes/redisChacheLayer");
 const expressip = require("express-ip");
-const serverRequest = require("request-promise");
-const analyticsLib = require("analytics").default;
-const googleAnalytics = require("@analytics/google-analytics").default;
 
 var path = require("path");
 global.expressServerRoot = path.resolve(__dirname);
@@ -21,7 +17,6 @@ global.expressServerRoot = path.resolve(__dirname);
 const LiveChatRoutes = require("./routes/LiveChatRoutes");
 const AuthRoutes = require("./routes/AuthRoutes");
 const AdCampaignRoutes = require("./routes/AdCampaignRoutes");
-const { user } = require("./models/Admin");
 
 // Socket event strings
 const CLIENT_INTRODUCTION = "CLIENT_INTRODUCTION";
@@ -32,21 +27,17 @@ const NEGATIVE_KEYWORD_EXCHANGE = "NEGATIVE_KEYWORD_EXCHANGE";
 const END_CURRENT_SESSION = "END_CURRENT_SESSION";
 const CLIENT_INTRODUCTION_PAIR_NOT_FOUND = "CLIENT_INTRODUCTION_PAIR_NOT_FOUND";
 
+const CREATE_ANSWER = "CREATE_ANSWER";
+const ICE_CANDIDATE = "ICE_CANDIDATE";
+const CREATE_OFFER = "CREATE_OFFER";
+const REQUEST_VIDEO_STREAM = "REQUEST_VIDEO_STREAM";
+const VIDEO_STREAM_ACCEPT = "VIDEO_STREAM_ACCEPT";
+
 process.env["mongo_status"] = "OFF";
 process.env["redis_status"] = "ON";
 
 //initiate dotenv
 dotenv.config();
-
-//initialise GoogleAnalytcis
-const analytics = analyticsLib({
-	app: "Blablah-server-analytics",
-	plugins: [
-		googleAnalytics({
-			trackingId: process.env.UNIVERSAL_GA_TRACK_ID
-		})
-	]
-});
 
 let trackingObject = {};
 
@@ -75,25 +66,11 @@ process.on("SIGINT", function () {
 
 const expressServer = express();
 const httpServer = http.createServer(expressServer);
-// const peerServer = ExpressPeerServer(httpServer, {
-// 	debug: true,
-// 	path: "/"
-// });
-
-// expressServer.use("/peerjs", peerServer);
-
-// peerServer.on("connection", (client) => {
-// 	console.log("PeerServer Connection new client - ", client.id);
-// });
-
-// peerServer.on("disconnect", (client) => {
-// 	console.log("PeerServer disconnect new client - ", client.id);
-// });
 
 const io = new Server(httpServer, {
 	path: "/live",
 	cors: {
-		origin: ["www.blablah.app", "https://www.blablah.app", "https://blablah.app", "*"],
+		origin: ["www.blablah.app", "https://www.blablah.app", "https://blablah.app"],
 		methods: ["GET", "POST"],
 		credentials: false
 	},
@@ -193,25 +170,76 @@ io.use(function (socket, next) {
 }).on("connection", (socket) => {
 	socket.on("error", (err) => console.log(err));
 	socket.on(CLIENT_INTRODUCTION, async (data) => {
-		redis.set(data.mySocketId, data);
-		redis.keys("*").then(async (result) => {
-			// check mutual `interests`, and interested `Gender`
-			try {
-				for (const userId of result) {
-					let user = await redis.get(userId);
-					if (
-						!user.data.peerFound &&
-						user.data.searchingPeer &&
-						user.data.peerSocketId === "" &&
-						user.mySocketId !== data.mySocketId &&
-						user.data.interests.length > 0 &&
-						data.data.interests.length > 0 &&
-						user.data.myGender.length > 0 &&
-						data.data.genderInterest.length > 0
-					) {
-						let intersectionInterests = user.data.interests.filter((interest) => data.data.interests.includes(interest));
+		if (!data) {
+			socket.emit(CLIENT_INTRODUCTION_PAIR_NOT_FOUND);
+		}
+		redis.set(data.mySocketId, data).then(() => {
+			redis.keys("*").then(async (result) => {
+				// check mutual `interests`, and interested `Gender`
+				try {
+					for (const userId of result) {
+						if (userId.length === 0) {
+							redis.del(userId);
+							continue;
+						}
+						let user = await redis.get(userId);
+						if (!user) {
+							redis.del(userId);
+							continue;
+						}
+						if (
+							!user.data.peerFound &&
+							user.data.searchingPeer &&
+							user.data.peerSocketId === "" &&
+							user.mySocketId !== data.mySocketId &&
+							user.data.interests.length > 0 &&
+							data.data.interests.length > 0 &&
+							user.data.myGender.length > 0 &&
+							data.data.genderInterest.length > 0
+						) {
+							let intersectionInterests = user.data.interests.filter((interest) => data.data.interests.includes(interest));
 
-						if (intersectionInterests.length > 0 && user.data.myGender === data.data.genderInterest) {
+							if (intersectionInterests.length > 0 && user.data.myGender === data.data.genderInterest) {
+								// to calling socket id
+								data.data.peerFound = true;
+								data.data.peerSocketId = user.mySocketId;
+								data.data.searchingPeer = false;
+
+								// to waiting socket id
+								user.data.peerFound = true;
+								user.data.peerSocketId = data.mySocketId;
+								user.data.searchingPeer = false;
+
+								// intersectedInterests
+								user.data.intersectedInterests = [...intersectionInterests];
+								data.data.intersectedInterests = [...intersectionInterests];
+
+								// gender interests
+								user.data.genderInterestFound = true;
+								data.data.genderInterestFound = true;
+
+								// save updated values to cache
+								redis.set([user.mySocketId, data.mySocketId], [user, data]).then(() => {
+									// emit to both users
+									socket.emit(CLIENT_INTRODUCTION, user);
+									socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
+								});
+								console.log("HITTED IN ALL MATCHES");
+								return;
+							}
+						}
+					}
+
+					// Check for gender matching
+					for (const userId of result) {
+						let user = await redis.get(userId);
+						if (
+							!user.data.peerFound &&
+							user.data.searchingPeer &&
+							user.data.peerSocketId === "" &&
+							user.mySocketId !== data.mySocketId &&
+							user.data.myGender === data.data.genderInterest
+						) {
 							// to calling socket id
 							data.data.peerFound = true;
 							data.data.peerSocketId = user.mySocketId;
@@ -221,10 +249,6 @@ io.use(function (socket, next) {
 							user.data.peerFound = true;
 							user.data.peerSocketId = data.mySocketId;
 							user.data.searchingPeer = false;
-
-							// intersectedInterests
-							user.data.intersectedInterests = [...intersectionInterests];
-							data.data.intersectedInterests = [...intersectionInterests];
 
 							// gender interests
 							user.data.genderInterestFound = true;
@@ -236,61 +260,62 @@ io.use(function (socket, next) {
 								socket.emit(CLIENT_INTRODUCTION, user);
 								socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
 							});
-							console.log("HITTED IN ALL MATCHES");
+							console.log("HITTED IN GENDER MATCHES");
 							return;
 						}
 					}
-				}
 
-				// Check for gender matching
-				for (const userId of result) {
-					let user = await redis.get(userId);
-					if (
-						!user.data.peerFound &&
-						user.data.searchingPeer &&
-						user.data.peerSocketId === "" &&
-						user.mySocketId !== data.mySocketId &&
-						user.data.myGender === data.data.genderInterest
-					) {
-						// to calling socket id
-						data.data.peerFound = true;
-						data.data.peerSocketId = user.mySocketId;
-						data.data.searchingPeer = false;
+					// Check for mutual common interests
+					for (const userId of result) {
+						let user = await redis.get(userId);
+						if (
+							!user.data.peerFound &&
+							user.data.searchingPeer &&
+							user.data.peerSocketId === "" &&
+							user.mySocketId !== data.mySocketId &&
+							user.data.interests.length > 0 &&
+							data.data.interests.length > 0
+						) {
+							let intersectionInterests = user.data.interests.filter((interest) => data.data.interests.includes(interest));
 
-						// to waiting socket id
-						user.data.peerFound = true;
-						user.data.peerSocketId = data.mySocketId;
-						user.data.searchingPeer = false;
+							if (intersectionInterests.length > 0) {
+								// to calling socket id
+								data.data.peerFound = true;
+								data.data.peerSocketId = user.mySocketId;
+								data.data.searchingPeer = false;
 
-						// gender interests
-						user.data.genderInterestFound = true;
-						data.data.genderInterestFound = true;
+								// to waiting socket id
+								user.data.peerFound = true;
+								user.data.peerSocketId = data.mySocketId;
+								user.data.searchingPeer = false;
 
-						// save updated values to cache
-						redis.set([user.mySocketId, data.mySocketId], [user, data]).then(() => {
-							// emit to both users
-							socket.emit(CLIENT_INTRODUCTION, user);
-							socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
-						});
-						console.log("HITTED IN GENDER MATCHES");
-						return;
+								// intersectedInterests
+								user.data.intersectedInterests = [...intersectionInterests];
+								data.data.intersectedInterests = [...intersectionInterests];
+
+								// save updated values to cache
+								redis.set([user.mySocketId, data.mySocketId], [user, data]).then(() => {
+									// emit to both users
+									socket.emit(CLIENT_INTRODUCTION, user);
+									socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
+								});
+								console.log("HITTED IN INTERESTS MATCHES");
+								return;
+							}
+						}
 					}
-				}
 
-				// Check for mutual common interests
-				for (const userId of result) {
-					let user = await redis.get(userId);
-					if (
-						!user.data.peerFound &&
-						user.data.searchingPeer &&
-						user.data.peerSocketId === "" &&
-						user.mySocketId !== data.mySocketId &&
-						user.data.interests.length > 0 &&
-						data.data.interests.length > 0
-					) {
-						let intersectionInterests = user.data.interests.filter((interest) => data.data.interests.includes(interest));
-
-						if (intersectionInterests.length > 0) {
+					// Connect with anyone if connectWithAnyone flag is enabled
+					for (const userId of result) {
+						let user = await redis.get(userId);
+						if (
+							data.data.connectWithAnyone &&
+							user.data.connectWithAnyone &&
+							!user.data.peerFound &&
+							user.data.searchingPeer &&
+							user.data.peerSocketId === "" &&
+							user.mySocketId !== data.mySocketId
+						) {
 							// to calling socket id
 							data.data.peerFound = true;
 							data.data.peerSocketId = user.mySocketId;
@@ -301,59 +326,23 @@ io.use(function (socket, next) {
 							user.data.peerSocketId = data.mySocketId;
 							user.data.searchingPeer = false;
 
-							// intersectedInterests
-							user.data.intersectedInterests = [...intersectionInterests];
-							data.data.intersectedInterests = [...intersectionInterests];
-
 							// save updated values to cache
 							redis.set([user.mySocketId, data.mySocketId], [user, data]).then(() => {
 								// emit to both users
 								socket.emit(CLIENT_INTRODUCTION, user);
 								socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
 							});
-							console.log("HITTED IN INTERESTS MATCHES");
+							console.log("HITTED IN NO MATCHES");
 							return;
 						}
 					}
+				} catch (err) {
+					console.log("ERR :: ", err);
 				}
 
-				// Connect with anyone if connectWithAnyone flag is enabled
-				for (const userId of result) {
-					let user = await redis.get(userId);
-					if (
-						data.data.connectWithAnyone &&
-						user.data.connectWithAnyone &&
-						!user.data.peerFound &&
-						user.data.searchingPeer &&
-						user.data.peerSocketId === "" &&
-						user.mySocketId !== data.mySocketId
-					) {
-						// to calling socket id
-						data.data.peerFound = true;
-						data.data.peerSocketId = user.mySocketId;
-						data.data.searchingPeer = false;
-
-						// to waiting socket id
-						user.data.peerFound = true;
-						user.data.peerSocketId = data.mySocketId;
-						user.data.searchingPeer = false;
-
-						// save updated values to cache
-						redis.set([user.mySocketId, data.mySocketId], [user, data]).then(() => {
-							// emit to both users
-							socket.emit(CLIENT_INTRODUCTION, user);
-							socket.to(user.mySocketId).emit(CLIENT_INTRODUCTION, data);
-						});
-						console.log("HITTED IN NO MATCHES");
-						return;
-					}
-				}
-			} catch (err) {
-				console.log("ERR :: ", err);
-			}
-
-			console.log("CLIENT_INTRODUCTION_PAIR_NOT_FOUND");
-			socket.emit(CLIENT_INTRODUCTION_PAIR_NOT_FOUND);
+				console.log("CLIENT_INTRODUCTION_PAIR_NOT_FOUND");
+				socket.emit(CLIENT_INTRODUCTION_PAIR_NOT_FOUND);
+			});
 		});
 	});
 
@@ -385,7 +374,7 @@ io.use(function (socket, next) {
 			.then(async (users) => {
 				let finalUsersArr = [];
 				for (let user of users) {
-					if (user.data) {
+					if (user && user.data && Object.keys(user).length > 0) {
 						user.data.peerFound = false;
 						user.data.peerSocketId = "";
 						user.data.searchingPeer = false;
@@ -401,6 +390,26 @@ io.use(function (socket, next) {
 			.catch((err) => {
 				console.log("Error -- ", err);
 			});
+	});
+
+	socket.on(ICE_CANDIDATE, async (data) => {
+		socket.to(data.data.peerSocketId).emit(ICE_CANDIDATE, { data });
+	});
+
+	socket.on(CREATE_OFFER, async (data) => {
+		socket.to(data.data.peerSocketId).emit(CREATE_OFFER, { data });
+	});
+
+	socket.on(CREATE_ANSWER, (data) => {
+		socket.to(data.data.peerSocketId).emit(CREATE_ANSWER, { data });
+	});
+
+	socket.on(REQUEST_VIDEO_STREAM, (data) => {
+		socket.to(data.data.peerSocketId).emit(REQUEST_VIDEO_STREAM, { data });
+	});
+
+	socket.on(VIDEO_STREAM_ACCEPT, (data) => {
+		socket.to(data.data.peerSocketId).emit(VIDEO_STREAM_ACCEPT, { data });
 	});
 
 	socket.on("disconnect", async (reason) => {

@@ -32,6 +32,7 @@ const ICE_CANDIDATE = "ICE_CANDIDATE";
 const CREATE_OFFER = "CREATE_OFFER";
 const REQUEST_VIDEO_STREAM = "REQUEST_VIDEO_STREAM";
 const VIDEO_STREAM_ACCEPT = "VIDEO_STREAM_ACCEPT";
+const END_CURRENT_VIDEO_STREAM = "END_CURRENT_VIDEO_STREAM";
 
 process.env["mongo_status"] = "OFF";
 process.env["redis_status"] = "ON";
@@ -410,6 +411,10 @@ io.use(function (socket, next) {
 
 	socket.on(VIDEO_STREAM_ACCEPT, (data) => {
 		socket.to(data.data.peerSocketId).emit(VIDEO_STREAM_ACCEPT, { data });
+	});
+
+	socket.on(END_CURRENT_VIDEO_STREAM, (data) => {
+		socket.to(data.data.peerSocketId).emit(END_CURRENT_VIDEO_STREAM, { data });
 	});
 
 	socket.on("disconnect", async (reason) => {

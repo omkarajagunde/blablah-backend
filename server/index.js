@@ -470,7 +470,7 @@ let interval = setInterval(async () => {
 		if (user.data.myBrowseringMode === "incognito") inIncognitoMode++;
 		if (user.data.myBrowseringMode === "normal") inNormalMode++;
 
-		if (!browserTracking[user.data.myBrowser]) browserTracking[user.data.myBrowser] = 0;
+		if (!browserTracking[user.data.myBrowser]) browserTracking[user.data.myBrowser] = 1;
 		else {
 			browserTracking[user.data.myBrowser] = browserTracking[user.data.myBrowser] + 1;
 		}

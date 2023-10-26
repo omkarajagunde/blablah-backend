@@ -33,6 +33,7 @@ const CREATE_OFFER = "CREATE_OFFER";
 const REQUEST_VIDEO_STREAM = "REQUEST_VIDEO_STREAM";
 const VIDEO_STREAM_ACCEPT = "VIDEO_STREAM_ACCEPT";
 const END_CURRENT_VIDEO_STREAM = "END_CURRENT_VIDEO_STREAM";
+const CAMERA_ACCESS_NOT_PROVIDED = "CAMERA_ACCESS_NOT_PROVIDED";
 
 process.env["mongo_status"] = "OFF";
 process.env["redis_status"] = "ON";
@@ -417,6 +418,10 @@ io.use(function (socket, next) {
 		socket.to(data.data.peerSocketId).emit(END_CURRENT_VIDEO_STREAM, { data });
 	});
 
+	socket.on(CAMERA_ACCESS_NOT_PROVIDED, (data) => {
+		socket.to(data.data.peerSocketId).emit(CAMERA_ACCESS_NOT_PROVIDED, { data });
+	});
+
 	socket.on("disconnect", async (reason) => {
 		killSocket(socket);
 	});
@@ -434,6 +439,8 @@ let interval = setInterval(async () => {
 		maleCount = 0,
 		femaleCount = 0,
 		anyCount = 0,
+		inIncognitoMode = 0,
+		inNormalMode = 0,
 		resultArr = [],
 		users = [];
 	try {
@@ -452,6 +459,7 @@ let interval = setInterval(async () => {
 	// interest wise users count
 
 	let interestsTracking = {};
+	let browserTracking = {};
 	users.forEach((user) => {
 		if (user.data.peerFound) usersPairedCount++;
 		else usersNotPairedCount++;
@@ -459,6 +467,13 @@ let interval = setInterval(async () => {
 		if (user.data.myGender === "male") maleCount++;
 		if (user.data.myGender === "any") anyCount++;
 		if (user.data.myGender === "female") femaleCount++;
+		if (user.data.myBrowseringMode === "incognito") inIncognitoMode++;
+		if (user.data.myBrowseringMode === "normal") inNormalMode++;
+
+		if (!browserTracking[user.data.myBrowser]) browserTracking[user.data.myBrowser] = 0;
+		else {
+			browserTracking[user.data.myBrowser] = browserTracking[user.data.myBrowser] + 1;
+		}
 
 		if (user.data.interests.length > 0) {
 			user.data.interests.forEach((interest) => {
@@ -477,9 +492,12 @@ let interval = setInterval(async () => {
 	trackingObject["maleCount"] = maleCount;
 	trackingObject["femaleCount"] = femaleCount;
 	trackingObject["anyCount"] = anyCount;
+	trackingObject["usersInPrivateMode"] = inIncognitoMode;
+	trackingObject["usersInNormalMode"] = inNormalMode;
 	trackingObject["interests"] = interestsTracking;
 
 	console.table(trackingObject.interests);
+	console.table(browserTracking);
 	delete trackingObject.interests;
 	console.table(trackingObject);
 	// analytics.track('RedisUserSessions', {
